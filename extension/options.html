@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Phishing URL Guard Options</title>
+    <style>body{font-family: system-ui, Arial; padding: 20px; max-width: 640px}</style>
+  </head>
+  <body>
+    <h2>Options</h2>
+    <label>API Base URL <input id="api" placeholder="http://localhost:4000" style="min-width: 360px"/></label>
+    <button id="save">Save</button>
+    <script>
+      const API_BASE_DEFAULT = 'http://localhost:4000';
+      chrome.storage.sync.get({ apiBase: API_BASE_DEFAULT }, (items) => {
+        document.getElementById('api').value = items.apiBase;
+      });
+      document.getElementById('save').addEventListener('click', () => {
+        const apiBase = document.getElementById('api').value.trim();
+        chrome.storage.sync.set({ apiBase }, () => alert('Saved'));
+      });
+    </script>
+  </body>
+</html>
+
+

@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Phishing URL Guard</title>
+    <style>body{font-family: system-ui, Arial; min-width: 260px; padding: 10px}</style>
+  </head>
+  <body>
+    <h3>Phishing URL Guard</h3>
+    <div id="status">Ready</div>
+    <script>
+      (async function(){
+        const API_BASE_DEFAULT = 'http://localhost:4000';
+        const apiBase = await new Promise(r=>chrome.storage.sync.get({ apiBase: API_BASE_DEFAULT }, v=>r(v.apiBase)));
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab || !tab.url) return;
+        document.getElementById('status').textContent = 'Scanning...';
+        try {
+          const res = await fetch(apiBase + '/scan-url', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url: tab.url }) });
+          const json = await res.json();
+          document.getElementById('status').textContent = `Verdict: ${json.verdict} (score ${Math.round(json.score)})`;
+        } catch (e) {
+          document.getElementById('status').textContent = 'Scan failed';
+        }
+      })();
+    </script>
+  </body>
+</html>
+
+

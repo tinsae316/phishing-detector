@@ -1,0 +1,17 @@
+{
+  "name": "phishing-detector-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@8.15.6",
+  "workspaces": [
+    "backend",
+    "dashboard"
+  ],
+  "scripts": {
+    "dev": "echo Run services individually: backend and dashboard",
+    "build": "echo Build services individually",
+    "start": "echo Start services individually"
+  }
+}
+
+

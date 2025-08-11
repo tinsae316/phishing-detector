@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Blocked - Phishing URL Guard</title>
+    <style>
+      body{font-family: system-ui, Arial; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; background:#fff5f5}
+      .card{background:#fff;border:1px solid #f0caca;border-radius:12px;padding:24px;max-width:720px}
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h2>Warning: Unsafe URL blocked</h2>
+      <div id="url"></div>
+      <div id="score"></div>
+      <p>This page has been flagged as unsafe by Phishing URL Guard. Proceeding is not recommended.</p>
+      <button id="close">Close Tab</button>
+    </div>
+    <script>
+      const p = new URLSearchParams(location.search);
+      document.getElementById('url').textContent = 'URL: ' + (p.get('u') || '');
+      document.getElementById('score').textContent = 'Risk score: ' + (p.get('score') || '');
+      document.getElementById('close').addEventListener('click', () => window.close());
+    </script>
+  </body>
+</html>
+
+

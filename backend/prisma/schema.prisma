@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ThreatEntry {
+  id          String   @id @default(cuid())
+  pattern     String   // domain or regex
+  isRegex     Boolean  @default(false)
+  severity    String   @default("high")
+  source      String   @default("manual")
+  notes       String?  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model DetectionLog {
+  id              String   @id @default(cuid())
+  url             String
+  verdict         String
+  score           Float
+  reasons         String   // JSON string of reasons array
+  matchedThreatIds String? // comma-separated list of ThreatEntry ids
+  clientIp        String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+}
+
+
