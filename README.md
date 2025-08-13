@@ -1,145 +1,307 @@
-Phishing URL Detection System
+# Phishing URL Detection System
 
-Overview
+A complete, production-ready phishing URL detection system with real-time scanning, threat intelligence integration, and admin management capabilities.
 
-This project is a complete, production-ready Phishing URL Detection System consisting of:
+## 🏗️ System Architecture
 
-- Firefox Browser Extension: Monitors active tab URLs, offers a "Scan this link" context menu, warns or blocks unsafe pages.
-- Backend API (Node.js + Express + PostgreSQL via Prisma): URL scanning logic, threat database, logs, admin authentication, rate limiting, and integrations with Google Safe Browsing and VirusTotal.
-- Admin Dashboard (Next.js + React): Secure admin login, dashboard metrics, threat management (CRUD), and log viewing with filters.
+The system consists of three main components:
 
-Monorepo Layout
-
-- `backend/` — Node.js + Express API with Prisma and PostgreSQL
-- `dashboard/` — Next.js Admin Dashboard
-- `extension/` — Firefox WebExtension (MV3)
-
-Quickstart
-
-1) Prerequisites
-
-- Node.js >= 18
-- pnpm (recommended) or npm/yarn
-- Docker (to run PostgreSQL locally)
-
-2) Environment
-
-Copy the provided examples and customize values:
-
-```bash
-cp backend/.env.example backend/.env
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Firefox       │    │   Backend API   │    │   Admin         │
+│   Extension     │◄──►│   (Node.js)     │◄──►│   Dashboard     │
+│   (MV2)         │    │   + Prisma      │    │   (Next.js)     │
+└─────────────────┘    │   + PostgreSQL  │    └─────────────────┘
+                       └─────────────────┘
 ```
 
-3) Start Database
+### 🔍 Detection Flow
 
-```bash
-docker compose up -d
+1. **URL Input**: User visits a website or right-clicks a link
+2. **Extension Scan**: Firefox extension sends URL to backend API
+3. **Multi-Layer Analysis**: Backend performs rule-based + external intelligence checks
+4. **Verdict**: Returns safe/suspicious/unsafe with score and reasons
+5. **Action**: Extension blocks unsafe pages, shows warnings for suspicious
+
+## 📁 Project Structure
+
+```
+phishing-detector/
+├── backend/                 # Node.js + Express API
+│   ├── src/
+│   │   ├── services/        # Core scanning logic
+│   │   ├── routes/          # API endpoints
+│   │   ├── middleware/      # Auth, validation
+│   │   └── lib/            # Config, database
+│   └── prisma/             # Database schema & migrations
+├── dashboard/              # Next.js admin interface
+│   └── app/               # React pages (login, threats, logs)
+├── extension/             # Firefox WebExtension (MV2)
+│   ├── background.js      # Service worker logic
+│   ├── popup.html         # Extension popup UI
+│   ├── block.html         # Blocking page
+│   └── options.html       # Settings page
+└── docker-compose.yml     # PostgreSQL (optional)
 ```
 
-4) Install Dependencies
+## 🧠 Detection Logic
 
-```bash
-pnpm install -r
-# or: npm install --workspaces
+### Backend Scanner (`backend/src/services/scanner.ts`)
+
+The core detection engine uses a multi-layered approach:
+
+#### 1. **Threat Database Matching** (Highest Priority)
+- Direct pattern matching against admin-defined threats
+- Supports exact domains and regex patterns
+- Severity-based scoring:
+  - `high` → +80 points (forces unsafe verdict)
+  - `medium` → +60 points (likely unsafe)
+  - `low` → +30 points (suspicious)
+
+#### 2. **Rule-Based Heuristics**
+- **Subdomain Analysis**: Long chains (>4 levels) → +10
+- **Hostname Length**: Very long (>50 chars) → +8
+- **Numeric Patterns**: Long digit sequences → +5
+- **Separator Abuse**: Repeated `-_.` → +6
+- **Control Characters**: Non-printable chars → +10
+- **Homograph Detection**: Mixed scripts (Cyrillic + Latin) → +25
+- **Brand Typosquatting**: Known brands in subdomains → +12
+- **Protocol Security**: Non-HTTPS → +20
+
+#### 3. **External Intelligence** (Optional)
+- **Google Safe Browsing API**: Known malicious URLs → +60
+- **VirusTotal API**: Community threat reports → +5 per detection
+
+#### 4. **Scoring & Verdict**
+```typescript
+score = ruleScore + externalScore
+if (score >= 70) verdict = "unsafe"
+else if (score >= 35) verdict = "suspicious"
+else verdict = "safe"
 ```
 
-5) Migrate and Seed (Backend)
+## 🔌 API Endpoints
 
+### Authentication
+- `POST /auth/login` - Admin login (email/password → JWT)
+
+### URL Scanning
+- `POST /scan-url` - Analyze URL, returns verdict + score + reasons
+
+### Admin Management (JWT Required)
+- `GET /threats` - List threat entries (with search)
+- `POST /threats` - Create new threat rule
+- `PUT /threats/:id` - Update threat rule
+- `DELETE /threats/:id` - Remove threat rule
+- `GET /logs` - View detection logs (with filters)
+
+## 🗄️ Database Schema
+
+### AdminUser
+- Admin authentication for dashboard access
+
+### ThreatEntry
+- `pattern`: Domain or regex to match
+- `isRegex`: Boolean flag for regex patterns
+- `severity`: high/medium/low impact
+- `source`: Origin (manual, feed, etc.)
+- `notes`: Optional description
+
+### DetectionLog
+- Complete audit trail of all scans
+- Stores URL, verdict, score, reasons
+- Tracks client IP and user agent
+- Links to matched threat IDs
+
+## 🌐 Firefox Extension
+
+### Manifest V2 Compatibility
+- Uses `browserAction` instead of `action` for MV2
+- Background script handles all scanning logic
+- Context menu integration for link scanning
+
+### Scanning Triggers
+1. **Tab Load Complete**: Auto-scan when page finishes loading
+2. **Tab Activation**: Scan when switching to a tab
+3. **Extension Install**: Initial scan of current tab
+4. **Context Menu**: Right-click "Scan this link"
+
+### User Experience
+- **Safe**: No visual indicator
+- **Suspicious**: Orange "!" badge on extension icon
+- **Unsafe**: Redirects to blocking page with details
+
+### Blocking Page
+- Shows warning message with risk score
+- Displays the blocked URL
+- Option to close tab
+- Customizable styling
+
+## 🖥️ Admin Dashboard
+
+### Next.js App Router
+- Modern React with TypeScript
+- Server-side rendering for better SEO
+- Client-side state management
+
+### Pages
+- **Login** (`/login`): Admin authentication
+- **Dashboard** (`/`): Overview statistics
+- **Threats** (`/threats`): CRUD threat management
+- **Logs** (`/logs`): Detection history with filters
+
+### Features
+- Real-time statistics (total scans, unsafe, suspicious)
+- Threat rule management with severity levels
+- Log filtering by date, severity, URL search
+- Responsive design for mobile/desktop
+
+## 🔧 Configuration
+
+### Environment Variables (`backend/.env`)
 ```bash
-cd backend
-pnpm prisma:migrate
-pnpm prisma:generate
-pnpm prisma:seed
+# Database (Neon PostgreSQL)
+DATABASE_URL="postgresql://user:pass@host/db?sslmode=require&pgbouncer=true"
+DIRECT_DATABASE_URL="postgresql://user:pass@host/db?sslmode=require"
+
+# Security
+JWT_SECRET="your-secret-key"
+FORCE_HTTPS=true  # Production only
+
+# External APIs (Optional)
+SAFE_BROWSING_API_KEY="google-api-key"
+VIRUSTOTAL_API_KEY="virustotal-api-key"
 ```
 
-6) Run Services (Dev)
+### Extension Configuration
+- API Base URL (defaults to `http://localhost:4000`)
+- Accessible via Options page or storage API
 
-Terminal A (backend):
+## 🚀 Deployment
 
-```bash
-cd backend
-pnpm dev
-```
+### Backend Deployment
+1. Set environment variables
+2. Run database migrations: `npx prisma migrate deploy`
+3. Generate Prisma client: `npx prisma generate`
+4. Start production server: `npm start`
 
-Terminal B (dashboard):
+### Dashboard Deployment
+1. Set `NEXT_PUBLIC_API_BASE_URL` to backend HTTPS URL
+2. Build: `npm run build`
+3. Start: `npm start`
 
-```bash
-cd dashboard
-pnpm dev
-```
+### Extension Distribution
+- Load as temporary add-on for development
+- Package for Firefox Add-ons store for production
 
-7) Load the Firefox Extension
+## 🔒 Security Features
 
-- Open `about:debugging#/runtime/this-firefox`
-- Click "Load Temporary Add-on"
-- Select the `extension/manifest.json`
+### Backend Security
+- **Helmet.js**: Security headers
+- **Rate Limiting**: Prevents API abuse
+- **Input Validation**: Zod schema validation
+- **JWT Authentication**: Secure admin access
+- **CORS Configuration**: Cross-origin protection
+- **HTTPS Enforcement**: Production redirect
 
-Configuration
+### Extension Security
+- **Content Security Policy**: Prevents XSS
+- **Minimal Permissions**: Only required host permissions
+- **Secure Storage**: Chrome storage API for settings
 
-Backend (`backend/.env`):
+## 📊 Monitoring & Analytics
 
-- `DATABASE_URL` — Postgres connection string (Docker compose sets this by default)
-- `JWT_SECRET` — Secret for JWT signing
-- `PORT` — Backend port (default 4000)
-- `FORCE_HTTPS` — Set `true` in production to enforce HTTPS
-- `SAFE_BROWSING_API_KEY` — Optional Google Safe Browsing API key
-- `VIRUSTOTAL_API_KEY` — Optional VirusTotal API key
+### Detection Metrics
+- Total scans performed
+- Verdict distribution (safe/suspicious/unsafe)
+- Threat rule effectiveness
+- External API usage statistics
 
-Admin credentials are seeded (see `backend/prisma/seed.ts`). Change them immediately in production.
+### Performance Monitoring
+- API response times
+- Database query performance
+- Extension scan frequency
+- Error rates and types
 
-API Endpoints (Backend)
+## 🔄 Development Workflow
 
-- `POST /auth/login` — Admin login (email, password) -> JWT
-- `POST /scan-url` — Analyze a URL, returns `{ verdict, score, reasons, matchedThreatIds }`
-- `GET /logs` — Admin-only, query filters: `q`, `severity`, `from`, `to`
-- `GET /threats` — Admin-only, list/search threats
-- `POST /threats` — Admin-only, create threat
-- `PUT /threats/:id` — Admin-only, update threat
-- `DELETE /threats/:id` — Admin-only, delete threat
+### Local Development
+1. Start PostgreSQL (Docker or Neon)
+2. Backend: `npm run dev` (port 4000)
+3. Dashboard: `npm run dev` (port 3000)
+4. Load extension in Firefox
+5. Test with example.com threat rule
 
-Security
+### Database Management
+- **Migrations**: `npx prisma migrate dev`
+- **Seeding**: `npx prisma db seed`
+- **Studio**: `npx prisma studio`
 
-- HTTPS-only in production (set `FORCE_HTTPS=true`)
-- JWT for admin routes
-- Input validation with Zod
-- IP rate limiting on scan and auth endpoints
-- Basic CORS hardening
+### Testing
+- API endpoints with curl/Postman
+- Extension functionality in Firefox
+- Dashboard features in browser
+- Threat rule effectiveness
 
-Tech Stack
+## 🎯 Use Cases
 
-- Backend: Node.js, Express, Prisma, PostgreSQL, Zod, JWT, Helmet, Rate Limit, Axios
-- Dashboard: Next.js (React), fetch API
-- Extension: Firefox WebExtension (MV3)
+### Enterprise Security
+- Block known phishing domains
+- Monitor employee web browsing
+- Generate security reports
+- Integrate with SIEM systems
 
-Development Plan
+### Personal Protection
+- Real-time URL scanning
+- Safe browsing enhancement
+- Privacy protection
+- Educational tool
 
-- Phase 1: Backend API + URL scanning logic (implemented)
-- Phase 2: Firefox extension basic functionality (implemented)
-- Phase 3: Admin dashboard (implemented)
-- Phase 4: Integrate external threat intelligence APIs (implemented with opt-in via API keys)
-- Phase 5: Deploy backend & dashboard (instructions below)
+### Security Research
+- Threat intelligence collection
+- Pattern analysis
+- Malware detection
+- Security metrics
 
-Deploy
+## 🔮 Future Enhancements
 
-Backend
+### Machine Learning Integration
+- URL feature extraction
+- Behavioral analysis
+- Anomaly detection
+- Predictive scoring
 
-1) Set environment variables for your host (Render, Railway, Fly.io, etc.)
-2) Run migrations: `pnpm prisma:migrate` and `pnpm prisma:generate`
-3) Start with `pnpm start`
+### Advanced Features
+- Screenshot analysis
+- JavaScript execution monitoring
+- Certificate validation
+- Geolocation blocking
 
-Dashboard
+### Integrations
+- SIEM systems (Splunk, ELK)
+- Threat feeds (AbuseIPDB, PhishTank)
+- Email security (DMARC, SPF)
+- Identity providers (SAML, OAuth)
 
-1) Set `NEXT_PUBLIC_API_BASE_URL` to your backend HTTPS URL
-2) Build: `pnpm build`
-3) Start: `pnpm start`
+---
 
-Extension
+## 📝 License
 
-- Update `extension/options.html` with your backend HTTPS API base URL or set via options UI
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-Notes
+## 🤝 Contributing
 
-- External threat lookups are best-effort and skipped if no API keys are configured.
-- The ML model hook is scaffolded in the backend scanner; you can connect a model endpoint or local model there.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📞 Support
+
+For issues and questions:
+- Create an issue on GitHub
+- Check the documentation
+- Review the code comments
 
 
