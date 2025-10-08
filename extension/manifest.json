@@ -9,6 +9,7 @@
     "tabs",
     "activeTab",
     "notifications",
+    "webNavigation",
     "<all_urls>"
   ],
   "background": { "scripts": ["background.js"] },
