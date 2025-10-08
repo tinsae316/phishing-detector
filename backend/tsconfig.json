@@ -11,7 +11,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true
   },
-  "include": ["src", "prisma", "test/testScanner.ts"]
+  "include": ["src", "prisma", "tests/testScanner.ts"]
 }
 
 
